@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -17,6 +17,10 @@ class ChunkMetadata(BaseModel):
 
     Strictly validated at construction time.
     ValidationError raised immediately on bad data.
+
+    Note: heading_path is a list representing the hierarchy from root to
+    the chunk's immediate heading. section_title is auto-derived from
+    heading_path[-1] at serialization time.
     """
 
     # Required fields
@@ -24,7 +28,7 @@ class ChunkMetadata(BaseModel):
         ..., min_length=1, description="Document identifier (SHA256 hash)"
     )
     chunk_index: int = Field(
-        ..., ge=0, description="Chunk index within document (0-based)"
+        ..., ge=0, description="Chunk index within document (0-based, sequential)"
     )
     page_start: int = Field(..., ge=0, description="Starting page number")
 
@@ -32,12 +36,9 @@ class ChunkMetadata(BaseModel):
     page_end: Optional[int] = Field(
         default=None, ge=0, description="Ending page number (None if single page)"
     )
-    section_title: Optional[str] = Field(
-        default=None, description="Section/heading title"
-    )
-    heading_path: Optional[str] = Field(
-        default=None,
-        description="Full heading path (e.g., 'Intro > Section 1 > 1.1')",
+    heading_path: List[str] = Field(
+        default_factory=list,
+        description="Full ancestor list from root to chunk's immediate heading",
     )
     char_start: int = Field(
         default=0, ge=0, description="Character offset start in document"
@@ -54,16 +55,30 @@ class ChunkMetadata(BaseModel):
         default=False,
         description="Flag for unclassified/malformed filename chunks",
     )
-    table_data: Optional[dict[str, Any]] = Field(
-        default=None, description="Table data if chunk contains table"
+    table_index: Optional[int] = Field(
+        default=None, description="Table index reference for table-containing chunks"
     )
     page_image_path: Optional[str] = Field(
         default=None, description="Path to page image (PDFs only)"
+    )
+    overlap_context: Optional[str] = Field(
+        default=None,
+        description="Overlap context from adjacent chunk (not embedded, not cited)",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Chunk metadata creation timestamp",
     )
+
+    @property
+    def section_title(self) -> str:
+        """
+        Derive section_title from heading_path[-1].
+
+        Never set independently - always derived from heading_path.
+        Returns empty string for fallback chunks with no heading_path.
+        """
+        return self.heading_path[-1] if self.heading_path else ""
 
     @field_validator("document_id")
     @classmethod
@@ -91,19 +106,13 @@ class ChunkMetadata(BaseModel):
             )
         return self
 
-    @model_validator(mode="after")
-    def validate_heading_path(self) -> "ChunkMetadata":
-        """
-        Validate heading_path is set when section_title is set.
-
-        This ensures proper hierarchy tracking.
-        """
-        if self.section_title and not self.heading_path:
-            raise ValueError(
-                f"heading_path must be set when section_title is '{self.section_title}'"
-            )
-        return self
-
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return self.model_dump(mode="json")
+        """
+        Convert to dictionary for serialization.
+
+        section_title is auto-derived from heading_path[-1].
+        """
+        data = self.model_dump(mode="json")
+        # Auto-derive section_title from heading_path
+        data["section_title"] = self.section_title
+        return data
