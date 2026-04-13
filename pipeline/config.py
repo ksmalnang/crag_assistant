@@ -27,7 +27,33 @@ class Settings(BaseSettings):
     qdrant_collection: str = Field(
         default="documents", description="Qdrant collection name"
     )
-    qdrant_vector_size: int = Field(default=3072, description="Vector dimension size")
+    qdrant_dense_dim: int = Field(
+        default=1024, description="Dense vector dimension size"
+    )
+    qdrant_sparse_distance: str = Field(
+        default="Dot", description="Sparse vector distance metric (Dot or Cosine)"
+    )
+    qdrant_api_key: Optional[str] = Field(
+        default=None, description="Qdrant API key (for cloud)"
+    )
+
+    # Upsert / Store Settings
+    qdrant_batch_size: int = Field(
+        default=100,
+        description="Batch size for Qdrant upsert operations",
+    )
+    qdrant_retry_max: int = Field(
+        default=3,
+        description="Max retry attempts for Qdrant 429/503 errors",
+    )
+    qdrant_retry_backoff_base: float = Field(
+        default=1.0,
+        description="Exponential backoff base in seconds for Qdrant retries",
+    )
+    qdrant_schema_version: str = Field(
+        default="1.0.0",
+        description="Schema version for auditability",
+    )
 
     # LangSmith Tracing (Optional)
     langchain_api_key: Optional[str] = Field(
