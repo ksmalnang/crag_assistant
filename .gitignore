@@ -56,3 +56,6 @@ Thumbs.db
 
 # uv
 uv.lock
+
+# Agent files
+.agent/
