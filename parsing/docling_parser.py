@@ -9,13 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult, DoclingDocument
-from docling.datamodel.pipeline_options import (
-    EasyOcrOptions,
-    PdfPipelineOptions,
-)
-from docling.document_converter import DocumentConverter, FormatOption
+from docling.document_converter import DocumentConverter
 
 from .errors import CorruptedDocumentError, ParseError, ParseTimeoutError
 
@@ -178,11 +173,11 @@ class DoclingParser:
                 parsing_time=parsing_time,
             )
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             raise ParseTimeoutError(
                 file_path=str(file_path),
                 timeout_seconds=self.timeout_seconds,
-            )
+            ) from e
         except ParseError:
             raise
         except Exception as e:
@@ -191,7 +186,7 @@ class DoclingParser:
                 file_path=str(file_path),
                 reason="parse_error",
                 message=f"Parsing failed: {e}",
-            )
+            ) from e
 
     def _parse_sync(self, file_path: Path) -> ConversionResult:
         """
@@ -305,7 +300,7 @@ class DoclingParser:
 
         # Log warning if no headings detected
         if not nodes:
-            logger.warning(f"No headings detected in document")
+            logger.warning("No headings detected in document")
 
         return nodes
 

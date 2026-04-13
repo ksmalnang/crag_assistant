@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import mimetypes
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import magic
 

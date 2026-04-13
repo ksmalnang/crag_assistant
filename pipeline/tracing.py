@@ -1,7 +1,6 @@
 """LangSmith tracing configuration and utilities."""
 
 import os
-from typing import Optional
 
 from pipeline.config import settings
 

@@ -9,7 +9,6 @@ from typing import Optional
 from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
 from pypdf import PdfReader
-from pypdf.errors import PdfReadError
 
 from .errors import (
     CorruptedFileError,
@@ -140,13 +139,13 @@ class PreflightValidator:
                     file_path=str(file_path),
                     detected_mime="application/pdf",
                     message=f"PDF is password-protected: {file_path}",
-                )
+                ) from e
             # Otherwise, it's a corruption issue
             raise CorruptedFileError(
                 file_path=str(file_path),
                 detected_mime="application/pdf",
                 message=f"PDF file is corrupted or unreadable: {file_path} - {e}",
-            )
+            ) from e
 
     def _check_docx_corruption(self, file_path: Path) -> None:
         """
@@ -167,13 +166,13 @@ class PreflightValidator:
                 file_path=str(file_path),
                 detected_mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 message=f"DOCX file is corrupted or unreadable: {file_path} - {e}",
-            )
+            ) from e
         except Exception as e:
             raise CorruptedFileError(
                 file_path=str(file_path),
                 detected_mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 message=f"DOCX file validation failed: {file_path} - {e}",
-            )
+            ) from e
 
 
 def validate_file_preflight(

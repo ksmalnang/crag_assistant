@@ -1,8 +1,7 @@
 """Tests for Qdrant connection manager."""
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import pytest
 from qdrant_client.models import CollectionDescription, CollectionsResponse
 
 from pipeline.qdrant import QdrantConnectionManager

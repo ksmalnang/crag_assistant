@@ -2,8 +2,6 @@
 
 from typing import get_type_hints
 
-import pytest
-
 from pipeline.state import STATE_SCHEMA_VERSION, RAGState, create_initial_state
 
 

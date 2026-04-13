@@ -3,8 +3,6 @@
 import os
 from unittest.mock import patch
 
-import pytest
-
 from pipeline.tracing import (
     disable_langsmith_tracing,
     get_tracing_status,
