@@ -54,6 +54,32 @@ class Settings(BaseSettings):
         description="Directory to watch for file ingestion",
     )
 
+    # Parsing Settings (Docling)
+    parser_timeout_seconds: int = Field(
+        default=120,
+        description="Timeout per file for Docling parsing (default: 120s)",
+    )
+    export_page_images: bool = Field(
+        default=False,
+        description="Export page images as PNG for source preview",
+    )
+    page_image_dpi: int = Field(
+        default=150,
+        description="DPI for exported page images",
+    )
+    ocr_enabled: bool = Field(
+        default=True,
+        description="Enable OCR for scanned PDFs",
+    )
+    ocr_confidence_threshold: float = Field(
+        default=0.6,
+        description="Minimum OCR confidence threshold (below this triggers low_confidence flag)",
+    )
+    scanned_pdf_char_threshold: int = Field(
+        default=100,
+        description="Average chars per page below this threshold flags PDF as scanned",
+    )
+
     @property
     def langsmith_enabled(self) -> bool:
         """Check if LangSmith tracing is properly configured."""
