@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "fixtures": [
+    {
+      "filename": "minimal_valid.pdf",
+      "description": "Basic valid PDF with simple text content",
+      "tests": [
+        "Format validation passes",
+        "Single chunk produced",
+        "No heading structure expected"
+      ],
+      "expected_chunks": 1,
+      "expected_headings": [],
+      "file_type": "happy_path"
+    },
+    {
+      "filename": "multi_heading.pdf",
+      "description": "PDF with multiple headings across 2 pages",
+      "tests": [
+        "Heading structure extracted",
+        "Multiple chunks produced",
+        "Page boundaries respected"
+      ],
+      "expected_chunks": 4,
+      "expected_headings": [
+        "Introduction",
+        "Methods",
+        "Results",
+        "Conclusion"
+      ],
+      "file_type": "happy_path"
+    },
+    {
+      "filename": "no_headings.pdf",
+      "description": "PDF without any heading structure (flat text)",
+      "tests": [
+        "Fallback chunking used",
+        "Single chunk from flat content"
+      ],
+      "expected_chunks": 1,
+      "expected_headings": [],
+      "file_type": "edge_case"
+    },
+    {
+      "filename": "valid.docx",
+      "description": "Valid DOCX with heading structure",
+      "tests": [
+        "DOCX format detected",
+        "Heading from filename convention",
+        "Body text chunked"
+      ],
+      "expected_chunks": 1,
+      "expected_headings": [
+        "Engineering 2025-S1 Lecture - Introduction to Machine Learning"
+      ],
+      "file_type": "happy_path"
+    },
+    {
+      "filename": "valid.pptx",
+      "description": "Valid PPTX with slide content",
+      "tests": [
+        "PPTX format detected",
+        "Slide title extracted"
+      ],
+      "expected_chunks": 1,
+      "expected_headings": [],
+      "file_type": "happy_path"
+    },
+    {
+      "filename": "corrupted.docx",
+      "description": "Invalid DOCX (ZIP with garbage content)",
+      "tests": [
+        "Format validation fails or produces empty output",
+        "CorruptedDocumentError or empty content"
+      ],
+      "expected_chunks": 0,
+      "expected_headings": [],
+      "file_type": "error_path"
+    },
+    {
+      "filename": "encrypted.pdf",
+      "description": "PDF with /Encrypt dictionary",
+      "tests": [
+        "Encryption detected",
+        "EncryptedFileError raised"
+      ],
+      "expected_chunks": 0,
+      "expected_headings": [],
+      "file_type": "error_path"
+    },
+    {
+      "filename": "oversized.pdf",
+      "description": "PDF stub exceeding 50MB size limit",
+      "tests": [
+        "FileTooLargeError raised",
+        "Rejected before parsing"
+      ],
+      "expected_chunks": 0,
+      "expected_headings": [],
+      "file_type": "error_path",
+      "size_bytes": 52428801
+    }
+  ]
+}

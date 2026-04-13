@@ -21,6 +21,8 @@ dependencies = [
     "watchdog>=6.0.0",
     "docling>=2.0.0",
     "easyocr>=1.7.0",
+    "slowapi>=0.1.9",
+    "sse-starlette>=2.1.0",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +33,7 @@ dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "pre-commit>=4.0.0",
+    "pytest-cov>=6.0.0",
 ]
 
 [tool.uv]
@@ -63,3 +66,6 @@ line_length = 88
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: marks tests as integration tests (require live Qdrant)",
+]

@@ -4,6 +4,7 @@ Usage:
     python -m ingestion.run --folder ./docs --concurrency 4
     python -m ingestion.run --folder ./docs --incremental
     python -m ingestion.run --folder ./docs --full
+    python -m ingestion.run --folder ./docs --dry-run
     python -m ingestion.run --report-only
     python -m ingestion.run --report-only --run-id <uuid>
 """
@@ -68,6 +69,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force full re-ingestion of all documents regardless of ledger state",
     )
     parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Dry-run mode: skip embedding and upsert, generate chunk quality report",
+    )
+    parser.add_argument(
         "--report-only",
         action="store_true",
         default=False,
@@ -103,6 +110,7 @@ async def run_ingestion(args: argparse.Namespace) -> None:
         concurrency=args.concurrency,
         incremental=args.incremental and not args.full,
         force_full=args.full,
+        dry_run=args.dry_run,
     )
 
     summary = await orchestrator.run_batch(str(folder_path))

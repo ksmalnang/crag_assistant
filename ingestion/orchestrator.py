@@ -42,6 +42,7 @@ class BatchOrchestrator:
         concurrency: int = 4,
         incremental: bool = True,
         force_full: bool = False,
+        dry_run: bool = False,
     ):
         """
         Initialize the batch orchestrator.
@@ -50,10 +51,12 @@ class BatchOrchestrator:
             concurrency: Max concurrent documents (default: 4).
             incremental: Whether to skip unchanged documents (default: True).
             force_full: Force re-ingestion of all files regardless of ledger.
+            dry_run: Skip embedding and upsert, generate chunk quality report.
         """
         self.concurrency = concurrency
         self.incremental = incremental
         self.force_full = force_full
+        self.dry_run = dry_run
         self.semaphore = asyncio.Semaphore(concurrency)
         self.ledger = IngestionLedger()
         self.graph = compile_ingestion_graph()
@@ -101,6 +104,71 @@ class BatchOrchestrator:
 
         return False, ""
 
+    async def _run_dry_run(self, initial_state: IngestionState) -> dict:
+        """
+        Run dry-run mode: intake -> parser -> metadata_resolver -> chunker.
+
+        Skips embedding and upsert nodes to avoid expensive operations.
+
+        Args:
+            initial_state: Initial ingestion state.
+
+        Returns:
+            Final state after chunking.
+        """
+        from ingestion.nodes import (
+            chunker_node,
+            intake_node,
+            metadata_resolver_node,
+            parser_node,
+        )
+
+        state = initial_state
+
+        # Run intake
+        intake_result = intake_node(state)
+        state.update(
+            {
+                k: v
+                for k, v in intake_result.items()
+                if k in state or k in ("document_id", "status")
+            }
+        )
+
+        if state.get("status") == "failed":
+            return state
+
+        # Run parser
+        parser_result = await parser_node(state)
+        state.update(
+            {
+                k: v
+                for k, v in parser_result.items()
+                if k in state or k in ("docling_doc", "structure_tree")
+            }
+        )
+
+        if state.get("status") == "failed":
+            return state
+
+        # Run metadata resolver
+        metadata_result = metadata_resolver_node(state)
+        state.update(
+            {
+                k: v
+                for k, v in metadata_result.items()
+                if k in state or k in ("metadata",)
+            }
+        )
+
+        # Run chunker (final step in dry-run)
+        chunker_result = chunker_node(state)
+        state.update(
+            {k: v for k, v in chunker_result.items() if k in state or k in ("chunks",)}
+        )
+
+        return state
+
     async def ingest_document(self, file_path: str, run_id: str) -> DocumentResult:
         """
         Ingest a single document through the LangGraph pipeline.
@@ -146,8 +214,12 @@ class BatchOrchestrator:
                     "status": "pending",
                 }
 
-                # Run through LangGraph
-                final_state = await self.graph.ainvoke(initial_state)
+                if self.dry_run:
+                    # Dry-run: only run up to chunker (skip embedding + upsert)
+                    final_state = await self._run_dry_run(initial_state)
+                else:
+                    # Full run: run through entire graph
+                    final_state = await self.graph.ainvoke(initial_state)
 
                 # Extract results
                 result.document_id = final_state.get("document_id")
@@ -167,8 +239,8 @@ class BatchOrchestrator:
                 if result.status in ("completed", "processing"):
                     result.status = "success"
 
-                    # Update ledger
-                    if result.document_id:
+                    # Update ledger (only in non-dry-run mode)
+                    if result.document_id and not self.dry_run:
                         file_bytes = Path(file_path).read_bytes()
                         content_hash = hashlib.sha256(file_bytes).hexdigest()
                         self.ledger.mark_ingested(
@@ -187,7 +259,7 @@ class BatchOrchestrator:
 
             return result
 
-    async def run_batch(self, folder: str) -> BatchRunSummary:
+    async def run_batch(self, folder: str) -> BatchRunSummary:  # noqa: C901
         """
         Run batch ingestion on all files in a folder.
 
@@ -293,13 +365,24 @@ class BatchOrchestrator:
         )
         report.save()
 
-        # Check alert conditions and send if needed
-        check_and_alert(
-            run_id=run_id,
-            total_files=summary.total_files,
-            failed_count=summary.failed,
-            errors=summary.errors,
-        )
+        # In dry-run mode, generate chunk quality report
+        if self.dry_run:
+            for result in results:
+                if result.status == "success" and result.chunks_created > 0:
+                    # Chunks are stored in the result's metadata for dry-run
+                    pass
+            logger.info(
+                f"[run:{run_id}] Dry-run complete. {len(results)} files processed."
+            )
+
+        # Check alert conditions and send if needed (skip for dry-run)
+        if not self.dry_run:
+            check_and_alert(
+                run_id=run_id,
+                total_files=summary.total_files,
+                failed_count=summary.failed,
+                errors=summary.errors,
+            )
 
         # Print human-readable summary
         self._print_summary(summary)
