@@ -27,9 +27,7 @@ class Settings(BaseSettings):
     qdrant_collection: str = Field(
         default="documents", description="Qdrant collection name"
     )
-    qdrant_vector_size: int = Field(
-        default=3072, description="Vector dimension size"
-    )
+    qdrant_vector_size: int = Field(default=3072, description="Vector dimension size")
 
     # LangSmith Tracing (Optional)
     langchain_api_key: Optional[str] = Field(
@@ -45,6 +43,16 @@ class Settings(BaseSettings):
     # Application Settings
     log_level: str = Field(default="INFO", description="Logging level")
     environment: str = Field(default="development", description="Environment name")
+
+    # Ingestion Settings
+    max_file_size_bytes: int = Field(
+        default=52_428_800,  # 50MB
+        description="Maximum allowed file size in bytes (default: 50MB)",
+    )
+    watch_dir: str = Field(
+        default="data/watch",
+        description="Directory to watch for file ingestion",
+    )
 
     @property
     def langsmith_enabled(self) -> bool:
