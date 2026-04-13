@@ -62,3 +62,6 @@ uv.lock
 
 # Qwen files
 .qwen/
+
+# Log folder
+logs/
